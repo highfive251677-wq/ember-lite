@@ -1,0 +1,14 @@
+{
+  "ember": {
+    "name": "Ember Signal",
+    "tagline": "Signals to Evidence",
+    "personality": "The Quiet Observer",
+    "values": ["No record no evidence", "Humans never lose control", "Block before harm"],
+    "layers": ["Provenance", "Safety", "Human-in-the-Loop", "Observability"],
+    "market": {
+      "category": "Evidence & Audit Layer",
+      "competitors": ["Lickly", "Zayker", "Alembic", "Capston Core", "E.Digital VAMS"],
+      "differentiation": "Local-first, Lightweight, Android/Termux"
+    }
+  }
+}
