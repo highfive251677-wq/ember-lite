@@ -43,7 +43,8 @@ fi
 echo "📥 Importing data from JSON..."
 
 jq -r '.sources[] | [.id, .name, .category, .type, (.url // ""), (.purpose // ""), (.layer // ""), (.relevance // ""), (.status // ""), (.notes // "")] | @tsv' data/sources.json | while IFS=$'\t' read -r id name cat type url purpose layer rel status notes; do
-    sqlite3 "$DB_PATH" "INSERT OR REPLACE INTO sources VALUES ('$id','$name','$cat','$type','$url','$purpose','$layer','$rel','$status','$notes');"
+    esc() { echo "$1" | sed "s/'/''/g"; }
+    sqlite3 "$DB_PATH" "INSERT OR REPLACE INTO sources VALUES ('$(esc "$id")','$(esc "$name")','$(esc "$cat")','$(esc "$type")','$(esc "$url")','$(esc "$purpose")','$(esc "$layer")','$(esc "$rel")','$(esc "$status")','$(esc "$notes")');"
 done
 
 echo ""
