@@ -1,4 +1,4 @@
-name: Ember Perception
+name: Ember Perception + Evidence Chain
 
 on:
   schedule:
@@ -19,18 +19,13 @@ jobs:
       - name: Install deps
         run: pip install rich cryptography
       
-      - name: Debug - check files
-        run: |
-          echo "=== PWD ===" && pwd
-          echo "=== Files ===" && ls -la
-          echo "=== Perception dir ===" && ls -la perception/
-      
       - name: Initialize databases
         run: |
-          python3 -c "from perception.database import init_db; init_db(); print('✅ perception.db')" || echo "⚠️ skipped"
-          python3 -c "from provenance import init_db; init_db(); print('✅ provenance.db')" || echo "⚠️ skipped"
+          python3 -c "from perception.database import init_db; init_db()" || true
+          python3 -c "from provenance import init_db; init_db()" || true
+          python3 -c "from perception.evidence_chain import init_chain_db; init_chain_db()" || true
       
-      - name: Run Perception
+      - name: Run Perception + Add to Chain
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
@@ -39,61 +34,35 @@ jobs:
           import json
           import traceback
           from datetime import datetime
-          
-          print("🔍 Starting perception from:", __import__("os").getcwd())
+          from perception.layer import perceive
+          from perception.evidence_chain import add_observation
           
           try:
-              from perception.layer import perceive
-              print("✅ Import OK")
-              
               result = perceive(save=False)
-              print(f"✅ Perceive OK: {len(result.get('observations', {}))} observations")
+              chain_result = add_observation(result, terminal="cloud")
               
               timestamp = datetime.now().strftime("%Y%m%d_%H%M")
               filename = f"evidence/perception_{timestamp}.json"
               with open(filename, "w") as f:
-                  json.dump(result, f, indent=2, default=str)
-              print(f"✅ Written: {filename}")
+                  json.dump({
+                      "perception": result,
+                      "chain": chain_result
+                  }, f, indent=2, default=str)
+              
+              print(f"✅ Perception: {len(result.get('observations', {}))} observations")
+              print(f"✅ Chain Block #{chain_result['block_index']}")
+              print(f"✅ Block Hash: {chain_result['block_hash'][:16]}...")
           except Exception as e:
-              print(f"❌ ERROR: {type(e).__name__}: {e}")
+              print(f"❌ ERROR: {e}")
               traceback.print_exc()
               raise
           PYEOF
       
-      - name: Show evidence
-        if: always()
-        run: |
-          ls -la evidence/ || true
-          cat evidence/perception_*.json 2>/dev/null | head -30 || true
-      
-      - name: Sign Evidence
-        if: success()
-        run: |
-          python3 << 'PYEOF'
-          import json, glob
-          from perception.bridge_signatures import sign
-          
-          files = sorted(glob.glob("evidence/perception_*.json"))
-          if not files:
-              print("⚠️ No evidence file")
-              exit(0)
-          latest = files[-1]
-          with open(latest) as f:
-              data = json.load(f)
-          if not data:
-              print("⚠️ Empty evidence")
-              exit(0)
-          signed = sign(data, terminal="cloud")
-          with open(f"{latest}.sig", "w") as f:
-              json.dump(signed, f, indent=2)
-          print(f"✅ Signed: {latest}.sig")
-          PYEOF
-      
-      - name: Commit Evidence
+      - name: Commit Evidence + Chain
         if: success()
         run: |
           git config user.name "Ember Bot"
           git config user.email "ember@bot.local"
-          git add evidence/
-          git diff --staged --quiet || git commit -m "Ember: Perception $(date +%Y-%m-%d_%H:%M)"
+          git add evidence/ perception/evidence_chain.db
+          git diff --staged --quiet || git commit -m "Ember: Chain block $(date +%Y-%m-%d_%H:%M)"
           git push || echo "Push skipped"

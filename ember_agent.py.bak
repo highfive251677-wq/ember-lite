@@ -39,7 +39,7 @@ except ImportError as e:
 
 # Brain
 try:
-    from ember_brain_light import EmberBrainLight
+from ember_brain_light import EmberBrainLight
     BRAIN_OK = True
 except ImportError as e:
     BRAIN_OK = False
