@@ -1,0 +1,38 @@
+name: Ember Perception
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  perceive:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install rich cryptography
+      - name: Create evidence dir
+        run: mkdir -p evidence
+      - name: Run Perception
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd perception
+          python3 -c "
+          from layer import perceive
+          import json
+          result = perceive(save=False)
+          print(json.dumps(result, indent=2, default=str))
+          " > ../evidence/perception_$(date +%Y%m%d_%H%M).json || echo '{}' > ../evidence/perception_$(date +%Y%m%d_%H%M).json
+      - name: Commit Evidence
+        run: |
+          git config user.name "Ember Bot"
+          git config user.email "ember@bot.local"
+          git add evidence/
+          git diff --staged --quiet || git commit -m "Ember: Perception evidence $(date +%Y-%m-%d_%H:%M)"
+          git push || echo "Push skipped"
