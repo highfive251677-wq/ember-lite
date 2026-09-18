@@ -1,0 +1,31 @@
+name: Validate Ember
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install rich cryptography
+      - name: Check syntax
+        run: |
+          for f in *.py perception/*.py; do
+            if [ -f "$f" ]; then
+              python3 -m py_compile "$f" || exit 1
+            fi
+          done
+      - name: Validate docs
+        run: bash scripts/validate-docs.sh
+      - name: Test imports
+        run: |
+          python3 -c "from perception.governance import evaluate_policies"
+          python3 -c "from perception.bridge_router import route_command"
+          python3 -c "from perception.release_gate import evaluate_release"
