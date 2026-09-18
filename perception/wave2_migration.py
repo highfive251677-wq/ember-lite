@@ -422,8 +422,9 @@ def verify_wave_2(conn: sqlite3.Connection,
     """Compare row counts between legacy and operational DBs."""
     report = {}
 
+    # Decisions live in lessons.db (shared file, different table)
     checks = [
-        ("decisions", "decision_log.db", "decisions"),
+        ("decisions", "lessons.db", "decisions"),
         ("lessons", "lessons.db", "lessons"),
         ("sensor_events", "sensor_buffer.db", "inbox"),
     ]
@@ -522,8 +523,9 @@ def run_wave_2(operational_db: str | Path,
         init_wave_2_schema(conn)
 
         # 3. Copy each table
+        # Decisions live in lessons.db (same file, different table)
         report["copies"]["decisions"] = copy_decisions(
-            conn, legacy_root / "decision_log.db")
+            conn, legacy_root / "lessons.db")
         report["copies"]["lessons"] = copy_lessons(
             conn, legacy_root / "lessons.db")
         report["copies"]["sensor_events"] = copy_sensor_events(
