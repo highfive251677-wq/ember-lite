@@ -15,7 +15,7 @@ KPI Compliance:
 import json
 from datetime import datetime, timezone
 from typing import Any
-
+from perception.evidence_chain import add_observation
 
 # =========================================================
 # ALLOWED VOCABULARY (Strict — matches BRAND.md)
@@ -389,9 +389,19 @@ def assess_wildfire(
 
     # --- Confidence (independent) ---
     health_ok = event.get("health_status") not in ("fault", "offline")
-    confidence, breakdown = calculate_evidence_score(
-        event, baseline or {}, neighbors
-    )
+
+    if baseline_valid:
+        confidence, breakdown = calculate_evidence_score(
+            event, baseline, neighbors,
+        )
+    else:
+        confidence = 0.0
+        breakdown = {
+            "components": [],
+            "penalties": [],
+            "skipped": True,
+            "reason": "baseline_invalid",
+        }
 
     # --- Severity (independent from confidence) ---
     severity = calculate_severity(event, neighbors, wind_toward_zone)
@@ -432,7 +442,7 @@ def assess_wildfire(
         f"{'Human approval required.' if requires_approval else 'Monitoring.'}"
     )[:500]
 
-    return {
+    alert = {
         "schema_version": "1.0",
         "incident_id": incident_id,
         "assessment": assessment,
@@ -451,6 +461,22 @@ def assess_wildfire(
         "analysis_timestamp": analysis_timestamp,
         "_debug": {"score_breakdown": breakdown},
     }
+
+    try:
+        chain_result = add_observation(alert, terminal="T")
+        alert["chain"] = {**chain_result, "available": True}
+    except Exception as exc:
+        alert["chain"] = {
+            "available": False,
+            "error": str(exc),
+            "block_index": None,
+            "block_hash": None,
+            "previous_hash": None,
+            "observation_hash": None,
+            "signed": False,
+        }
+
+    return alert
 
 
 # =========================================================
