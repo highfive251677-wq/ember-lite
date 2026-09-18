@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0",
+  "description": "Ember Wildfire Replay Fixtures — Edge Cases",
+  "scenarios": [
+    {
+      "id": "S01_normal_day",
+      "description": "Healthy sensor, no fire signal",
+      "event": {
+        "event_id": "E-S01", "sensor_id": "S-01", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 22.0, "temperature_c": 31.0,
+        "humidity_percent": 38.0, "health_status": "healthy",
+        "battery_percent": 90, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 20.0, "temperature_c": 30.0, "humidity_percent": 40.0},
+      "neighbors": [],
+      "history": [],
+      "expected_assessment_in": ["normal", "insufficient_data"]
+    },
+    {
+      "id": "S02_single_spike",
+      "description": "One sensor spikes, no corroboration",
+      "event": {
+        "event_id": "E-S02", "sensor_id": "S-02", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 176.0, "temperature_c": 42.0,
+        "humidity_percent": 24.0, "health_status": "healthy",
+        "battery_percent": 80, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 18.0, "temperature_c": 30.0, "humidity_percent": 42.0},
+      "neighbors": [],
+      "history": [],
+      "expected_assessment_in": ["possible_smoke", "suspicious_signal", "insufficient_data"]
+    },
+    {
+      "id": "S03_corroborated",
+      "description": "Multiple sensors agree, wind toward zone",
+      "event": {
+        "event_id": "E-S03", "sensor_id": "S-03", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 180.0, "temperature_c": 43.0,
+        "humidity_percent": 22.0, "health_status": "healthy",
+        "battery_percent": 85, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 18.0, "temperature_c": 30.0, "humidity_percent": 42.0},
+      "neighbors": [
+        {"event_id": "E-S03-N1", "sensor_id": "S-03-N1", "captured_at": "NOW", "pm25": 150.0},
+        {"event_id": "E-S03-N2", "sensor_id": "S-03-N2", "captured_at": "NOW", "pm25": 140.0}
+      ],
+      "history": [],
+      "wind_toward_zone": true,
+      "expected_assessment_in": ["possible_smoke", "corroborated_event"]
+    },
+    {
+      "id": "S04_stale_data",
+      "description": "Timestamp 2 hours old",
+      "event": {
+        "event_id": "E-S04", "sensor_id": "S-04", "zone_id": "zone-01",
+        "captured_at": "OLD_2H", "pm25": 200.0, "temperature_c": 45.0,
+        "humidity_percent": 20.0, "health_status": "healthy",
+        "battery_percent": 85, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 18.0, "temperature_c": 30.0, "humidity_percent": 42.0},
+      "neighbors": [],
+      "history": [],
+      "expected_validation": "stale"
+    },
+    {
+      "id": "S05_unsigned_data",
+      "description": "Missing schema_version — unsigned source",
+      "event": {
+        "event_id": "E-S05", "sensor_id": "S-05", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 150.0, "temperature_c": 40.0,
+        "humidity_percent": 25.0, "health_status": "healthy"
+      },
+      "baseline": {"pm25": 18.0, "temperature_c": 30.0, "humidity_percent": 42.0},
+      "neighbors": [],
+      "history": [],
+      "expected_validation_in": ["unknown", "valid"]
+    },
+    {
+      "id": "S06_contradictory",
+      "description": "Neighbors from different zone",
+      "event": {
+        "event_id": "E-S06", "sensor_id": "S-06", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 130.0, "temperature_c": 38.0,
+        "humidity_percent": 28.0, "health_status": "healthy",
+        "battery_percent": 85, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 18.0, "temperature_c": 30.0, "humidity_percent": 42.0},
+      "neighbors": [
+        {"event_id": "E-S06-N1", "sensor_id": "S-06-N1", "captured_at": "NOW",
+         "zone_id": "zone-99", "pm25": 100.0}
+      ],
+      "history": [],
+      "expected_validation": "conflicting"
+    },
+    {
+      "id": "S07_missing_baseline",
+      "description": "No baseline at all",
+      "event": {
+        "event_id": "E-S07", "sensor_id": "S-07", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 250.0, "temperature_c": 45.0,
+        "humidity_percent": 20.0, "health_status": "healthy",
+        "battery_percent": 85, "schema_version": "1.0"
+      },
+      "baseline": null,
+      "neighbors": [],
+      "history": [],
+      "expected_assessment": "insufficient_data"
+    },
+    {
+      "id": "S08_duplicate_observation",
+      "description": "Same event_id sent twice",
+      "event": {
+        "event_id": "E-S08", "sensor_id": "S-08", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 100.0, "temperature_c": 35.0,
+        "humidity_percent": 30.0, "health_status": "healthy",
+        "battery_percent": 85, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 20.0, "temperature_c": 30.0, "humidity_percent": 40.0},
+      "neighbors": [],
+      "history": [],
+      "send_twice": true,
+      "expected_dedup": true
+    },
+    {
+      "id": "S09_clock_skew",
+      "description": "Timestamp 5 minutes in future",
+      "event": {
+        "event_id": "E-S09", "sensor_id": "S-09", "zone_id": "zone-01",
+        "captured_at": "FUTURE_5M", "pm25": 100.0, "temperature_c": 35.0,
+        "humidity_percent": 30.0, "health_status": "healthy",
+        "battery_percent": 85, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 20.0, "temperature_c": 30.0, "humidity_percent": 40.0},
+      "neighbors": [],
+      "history": [],
+      "expected_validation": "invalid"
+    },
+    {
+      "id": "S10_corrupted_chain",
+      "description": "Chain verify detects tampering",
+      "event": {
+        "event_id": "E-S10", "sensor_id": "S-10", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 120.0, "temperature_c": 38.0,
+        "humidity_percent": 28.0, "health_status": "healthy",
+        "battery_percent": 85, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 20.0, "temperature_c": 30.0, "humidity_percent": 40.0},
+      "neighbors": [],
+      "history": [],
+      "corrupt_after_append": true,
+      "expected_verify": false
+    },
+    {
+      "id": "S11_expired_approval",
+      "description": "Action expires before approval",
+      "action_type": "notify_zone",
+      "risk_tier": "T3",
+      "ttl_seconds": -1,
+      "expected_approve": false,
+      "expected_reason": "action_expired"
+    },
+    {
+      "id": "S12_policy_mismatch",
+      "description": "Action tier exceeds policy max",
+      "action_type": "store_observation",
+      "risk_tier": "T5",
+      "expected_policy_decision": "deny"
+    },
+    {
+      "id": "S13_offline_mode",
+      "description": "Full pipeline runs without network",
+      "event": {
+        "event_id": "E-S13", "sensor_id": "S-13", "zone_id": "zone-01",
+        "captured_at": "NOW", "pm25": 160.0, "temperature_c": 41.0,
+        "humidity_percent": 24.0, "health_status": "healthy",
+        "battery_percent": 85, "schema_version": "1.0"
+      },
+      "baseline": {"pm25": 18.0, "temperature_c": 30.0, "humidity_percent": 42.0},
+      "neighbors": [{"event_id": "E-S13-N1", "sensor_id": "S-13-N1",
+                     "captured_at": "NOW", "pm25": 130.0}],
+      "history": [],
+      "wind_toward_zone": true,
+      "expected_assessment_in": ["possible_smoke", "corroborated_event"],
+      "offline": true
+    }
+  ]
+}

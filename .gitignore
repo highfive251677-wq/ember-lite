@@ -20,3 +20,9 @@ __pycache__/
 *.pyc
 perception/keys/
 *.db
+
+# Wave backups (runtime data)
+**/wave2_backups/
+**/wave3_backups/
+**/migration_backup/
+**/*_backups/
