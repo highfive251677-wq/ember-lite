@@ -1,0 +1,209 @@
+{
+  "perceived_at": "2026-09-18T10:56:33.024333",
+  "observer_count": 4,
+  "observations": {
+    "backend": {
+      "source": "backend",
+      "category": "health",
+      "status": "healthy",
+      "confidence": 98,
+      "data": {
+        "status_code": 200,
+        "body_preview": "{\"database\":\"ok\",\"evidence\":41,\"quarantined_evidence\":6,\"records\":357,\"sources\":113,\"status\":\"ok\",\"verified_evidence\":6,\"verified_sources\":59}\n",
+        "url": "https://ember-signal-backend-production.up.railway.app"
+      },
+      "cost_ms": 239,
+      "error_type": null,
+      "provenance_hash": "30a70c0194b1a2b6",
+      "observed_at": "2026-09-18T10:56:33.263978",
+      "scored_confidence": 86,
+      "change_report": {
+        "changed": false,
+        "is_first": true,
+        "changes": {}
+      }
+    },
+    "repo": {
+      "source": "repo",
+      "category": "state",
+      "status": "error",
+      "confidence": 0,
+      "data": {
+        "error": "list index out of range",
+        "trace": "                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^"
+      },
+      "cost_ms": 3,
+      "error_type": "unknown_error",
+      "provenance_hash": "81623e8030723d66",
+      "observed_at": "2026-09-18T10:56:33.267451",
+      "scored_confidence": 37,
+      "change_report": {
+        "changed": false,
+        "is_first": true,
+        "changes": {}
+      }
+    },
+    "evidence": {
+      "source": "evidence",
+      "category": "provenance",
+      "status": "missing",
+      "confidence": 99,
+      "data": {
+        "db_exists": false,
+        "total_actions": 0,
+        "pending": 0,
+        "approved": 0
+      },
+      "cost_ms": 0,
+      "error_type": null,
+      "provenance_hash": "1face5465585fd49",
+      "observed_at": "2026-09-18T10:56:33.267487",
+      "scored_confidence": 87,
+      "change_report": {
+        "changed": false,
+        "is_first": true,
+        "changes": {}
+      }
+    },
+    "local": {
+      "source": "local",
+      "category": "environment",
+      "status": "healthy",
+      "confidence": 100,
+      "data": {
+        "disk_free_gb": 86.02,
+        "disk_used_gb": 58.22,
+        "disk_percent": 40,
+        "cwd": "/home/runner/work/ember-lite/ember-lite",
+        "user": "runner"
+      },
+      "cost_ms": 0,
+      "error_type": null,
+      "provenance_hash": "ecda91788568f846",
+      "observed_at": "2026-09-18T10:56:33.267528",
+      "scored_confidence": 87,
+      "change_report": {
+        "changed": false,
+        "is_first": true,
+        "changes": {}
+      }
+    }
+  },
+  "errors": [],
+  "analysis": {
+    "analyzed_at": "2026-09-18T10:56:33.267531",
+    "observations": {
+      "backend": {
+        "source": "backend",
+        "category": "health",
+        "status": "healthy",
+        "confidence": 98,
+        "data": {
+          "status_code": 200,
+          "body_preview": "{\"database\":\"ok\",\"evidence\":41,\"quarantined_evidence\":6,\"records\":357,\"sources\":113,\"status\":\"ok\",\"verified_evidence\":6,\"verified_sources\":59}\n",
+          "url": "https://ember-signal-backend-production.up.railway.app"
+        },
+        "cost_ms": 239,
+        "error_type": null,
+        "provenance_hash": "30a70c0194b1a2b6",
+        "observed_at": "2026-09-18T10:56:33.263978",
+        "scored_confidence": 86,
+        "change_report": {
+          "changed": false,
+          "is_first": true,
+          "changes": {}
+        }
+      },
+      "repo": {
+        "source": "repo",
+        "category": "state",
+        "status": "error",
+        "confidence": 0,
+        "data": {
+          "error": "list index out of range",
+          "trace": "                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^"
+        },
+        "cost_ms": 3,
+        "error_type": "unknown_error",
+        "provenance_hash": "81623e8030723d66",
+        "observed_at": "2026-09-18T10:56:33.267451",
+        "scored_confidence": 37,
+        "change_report": {
+          "changed": false,
+          "is_first": true,
+          "changes": {}
+        }
+      },
+      "evidence": {
+        "source": "evidence",
+        "category": "provenance",
+        "status": "missing",
+        "confidence": 99,
+        "data": {
+          "db_exists": false,
+          "total_actions": 0,
+          "pending": 0,
+          "approved": 0
+        },
+        "cost_ms": 0,
+        "error_type": null,
+        "provenance_hash": "1face5465585fd49",
+        "observed_at": "2026-09-18T10:56:33.267487",
+        "scored_confidence": 87,
+        "change_report": {
+          "changed": false,
+          "is_first": true,
+          "changes": {}
+        }
+      },
+      "local": {
+        "source": "local",
+        "category": "environment",
+        "status": "healthy",
+        "confidence": 100,
+        "data": {
+          "disk_free_gb": 86.02,
+          "disk_used_gb": 58.22,
+          "disk_percent": 40,
+          "cwd": "/home/runner/work/ember-lite/ember-lite",
+          "user": "runner"
+        },
+        "cost_ms": 0,
+        "error_type": null,
+        "provenance_hash": "ecda91788568f846",
+        "observed_at": "2026-09-18T10:56:33.267528",
+        "scored_confidence": 87,
+        "change_report": {
+          "changed": false,
+          "is_first": true,
+          "changes": {}
+        }
+      }
+    },
+    "changes": {
+      "backend": {
+        "changed": false,
+        "is_first": true,
+        "changes": {}
+      },
+      "repo": {
+        "changed": false,
+        "is_first": true,
+        "changes": {}
+      },
+      "evidence": {
+        "changed": false,
+        "is_first": true,
+        "changes": {}
+      },
+      "local": {
+        "changed": false,
+        "is_first": true,
+        "changes": {}
+      }
+    },
+    "correlations": [],
+    "overall_confidence": 74,
+    "overall_status": "critical"
+  }
+}
