@@ -101,6 +101,9 @@ except ImportError as e:
     ORCHESTRATOR_OK = False
     ORCHESTRATOR_ERROR = str(e)
 
+# Wildfire AI (lazy — imported inside do_wildfire to save startup)
+WILDFIRE_OK = True  # actual import checked at runtime
+
 # Release Gate (P5)
 try:
     from perception.release_gate import (
@@ -752,6 +755,108 @@ Format:
             )
         console.print(table)
 
+    # =========================================================
+    # WILDFIRE METHODS (Task B)
+    # =========================================================
+
+    def do_wildfire(self, argument: str = ""):
+        """Run wildfire assessment demo. Lazy import to save startup."""
+        try:
+            from perception.wildfire_assessment import (
+                assess_wildfire, persist_wildfire_decision,
+            )
+            from perception.wildfire_gate import evaluate_wildfire_gate
+        except ImportError as e:
+            console.print(f"[red]❌ Wildfire module missing: {e}[/red]")
+            return
+
+        argument = (argument or "demo").strip().lower()
+
+        if argument not in ("", "demo", "status"):
+            console.print("[yellow]Usage: wildfire [demo|status][/yellow]")
+            return
+
+        if argument == "status":
+            from perception.decision_log import count_decisions, get_decisions
+            from perception.evidence_chain import get_chain_summary
+            try:
+                table = Table(title="🔥 Wildfire Status")
+                table.add_column("Metric", style="cyan")
+                table.add_column("Value", style="green")
+                table.add_row("Decisions logged", str(count_decisions()))
+                chain = get_chain_summary()
+                table.add_row("Chain blocks", str(chain.get("blocks", 0)))
+                table.add_row("Chain tip", str(chain.get("tip_hash", "-")))
+                console.print(table)
+            except Exception as e:
+                console.print(f"[red]❌ Status error: {e}[/red]")
+            return
+
+        # Demo mode
+        console.print("\n[dim]🔥 Ember Wildfire — Demo Assessment[/dim]\n")
+
+        event = {
+            "event_id": "CLI-EVT-001",
+            "sensor_id": "CLI-SENSOR-001",
+            "zone_id": "zone-demo",
+            "captured_at": "2026-09-18T12:00:00Z",
+            "pm25": 176.0,
+            "temperature_c": 42.1,
+            "humidity_percent": 24.0,
+            "health_status": "healthy",
+            "is_stale": False,
+        }
+        baseline = {
+            "pm25": 18.0,
+            "temperature_c": 30.0,
+            "humidity_percent": 42.0,
+        }
+        neighbors = [{
+            "event_id": "CLI-EVT-002",
+            "sensor_id": "CLI-SENSOR-002",
+            "pm25": 121.0,
+        }]
+
+        alert = assess_wildfire(
+            incident_id="CLI-INC-001",
+            event=event,
+            baseline=baseline,
+            neighbors=neighbors,
+            wind_toward_zone=True,
+        )
+
+        # Gate context
+        conf = alert.get("confidence", 0.0)
+        chain = alert.get("chain", {})
+        gate_ctx = {
+            "evidence_quality": int(conf * 100),
+            "sensor_health": 90,
+            "corroboration": 75,
+            "temporal_consistency": 60,
+            "policy_compliance": 100 if chain.get("available") else 0,
+            "requires_human_approval": alert.get("requires_human_approval", True),
+        }
+        alert["gate"] = evaluate_wildfire_gate(gate_ctx)
+        alert = persist_wildfire_decision(alert)
+
+        # Display
+        console.print(Panel.fit(
+            f"[bold]Assessment:[/bold]  {alert['assessment']}\n"
+            f"[bold]Severity:[/bold]    {alert['severity']}\n"
+            f"[bold]Confidence:[/bold]  {alert['confidence']}\n"
+            f"[bold]Gate:[/bold]        {alert['gate']['decision']} "
+            f"({alert['gate']['score']}/100)\n"
+            f"[bold]Human Approval:[/bold] "
+            f"{'REQUIRED' if alert['requires_human_approval'] else 'NOT REQUIRED'}\n"
+            f"[bold]Chain:[/bold]       "
+            f"{'OK' if chain.get('available') else 'FAILED'}\n"
+            f"[bold]Decision Log:[/bold] "
+            f"{'recorded #' + str(alert['decision_log']['decision_id']) if alert['decision_log']['available'] else 'FAILED'}",
+            title="🔥 Wildfire Result",
+            border_style="red"
+        ))
+        console.print(f"\n[dim]{alert['summary']}[/dim]\n")
+
     def do_ask(self, question: str):
         if not self.brain:
             console.print("[red]❌ Brain offline.[/red]")
@@ -927,6 +1032,12 @@ Format:
 
                 
                 # ===== LESSONS =====
+                # ===== WILDFIRE (Task B) =====
+                if cmd_lower == "wildfire":
+                    self.do_wildfire("demo"); continue
+                if cmd_lower.startswith("wildfire "):
+                    self.do_wildfire(cmd_stripped[9:].strip()); continue
+
                 if cmd_lower == "lessons": self.do_lessons(); continue
                 if cmd_lower.startswith("check "):
                     self.do_check_lessons(cmd_stripped[6:].strip()); continue
