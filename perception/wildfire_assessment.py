@@ -9,7 +9,7 @@ KPI Compliance:
 - KPI #2 Human-in-Control: Physical actions require approval.
 - KPI #3 Cryptographic Integrity: Integrates with evidence_chain.
 - KPI #4 Local-First: Pure Python stdlib only.
-- KPI #6 Self-Learning: Integrates with decision_log.
+- KPI #6 Self-Learning: Decision persistence via separate function.
 """
 
 import json
@@ -477,6 +477,49 @@ def assess_wildfire(
         }
 
     return alert
+
+
+# =========================================================
+# DECISION PERSISTENCE (KPI #6)
+# =========================================================
+
+def persist_wildfire_decision(alert: dict) -> dict:
+    """
+    Persist a wildfire assessment to the decision log.
+
+    Side-effect function — intentionally separate from assess_wildfire()
+    so that the core assessment remains pure and testable.
+
+    KPI #6: Assessment pattern history.
+    Failure is visible but non-fatal.
+    """
+    try:
+        from perception.decision_log import record_decision
+
+        breakdown = alert.get("_debug", {}).get("score_breakdown", {})
+        pattern = breakdown.get("reason") if isinstance(breakdown, dict) else None
+
+        decision_id = record_decision(
+            incident_id=alert.get("incident_id"),
+            assessment=alert.get("assessment", "insufficient_data"),
+            severity=alert.get("severity", "info"),
+            confidence=alert.get("confidence", 0.0),
+            requires_human_approval=alert.get("requires_human_approval", True),
+            pattern=pattern,
+        )
+
+        alert["decision_log"] = {
+            "available": True,
+            "decision_id": decision_id,
+        }
+    except Exception as exc:
+        alert["decision_log"] = {
+            "available": False,
+            "error": str(exc),
+        }
+
+    return alert
+
 
 
 # =========================================================
