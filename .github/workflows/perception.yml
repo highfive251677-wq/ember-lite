@@ -15,24 +15,79 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install rich cryptography
-      - name: Create evidence dir
-        run: mkdir -p evidence
-      - name: Run Perception
+      
+      - name: Install deps
+        run: pip install rich cryptography
+      
+      - name: Initialize databases
+        run: |
+          cd perception
+          python3 -c "from database import init_db; init_db(); print('✅ perception.db')"
+          cd ..
+          python3 -c "from provenance import init_db; init_db(); print('✅ provenance.db')"
+      
+      - name: Run Perception (with full error output)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           cd perception
-          python3 -c "
-          from layer import perceive
+          python3 << 'PYEOF'
           import json
-          result = perceive(save=False)
-          print(json.dumps(result, indent=2, default=str))
-          " > ../evidence/perception_$(date +%Y%m%d_%H%M).json || echo '{}' > ../evidence/perception_$(date +%Y%m%d_%H%M).json
+          import traceback
+          from datetime import datetime
+          from layer import perceive
+          
+          try:
+              result = perceive(save=False)
+              timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+              with open(f"../evidence/perception_{timestamp}.json", "w") as f:
+                  json.dump(result, f, indent=2, default=str)
+              print(f"✅ Success: {len(result.get('observations', {}))} observations")
+          except Exception as e:
+              print(f"❌ ERROR: {type(e).__name__}: {e}")
+              traceback.print_exc()
+              raise
+          PYEOF
+      
+      - name: Sign Evidence
+        if: success()
+        run: |
+          python3 << 'PYEOF'
+          import json
+          import glob
+          from perception.bridge_signatures import sign
+          
+          files = sorted(glob.glob("evidence/perception_*.json"))
+          if not files:
+              print("⚠️  No evidence file found")
+              exit(0)
+          
+          latest = files[-1]
+          with open(latest) as f:
+              data = json.load(f)
+          
+          if not data:
+              print(f"⚠️  Empty evidence: {latest}")
+              exit(0)
+          
+          signed = sign(data, terminal="cloud")
+          with open(f"{latest}.sig", "w") as f:
+              json.dump(signed, f, indent=2)
+          print(f"✅ Signed: {latest}.sig")
+          PYEOF
+      
+      - name: Upload error log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-log
+          path: evidence/
+      
       - name: Commit Evidence
+        if: success()
         run: |
           git config user.name "Ember Bot"
           git config user.email "ember@bot.local"
           git add evidence/
-          git diff --staged --quiet || git commit -m "Ember: Perception evidence $(date +%Y-%m-%d_%H:%M)"
+          git diff --staged --quiet || git commit -m "Ember: Perception $(date +%Y-%m-%d_%H:%M)"
           git push || echo "Push skipped"
