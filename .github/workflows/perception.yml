@@ -19,69 +19,75 @@ jobs:
       - name: Install deps
         run: pip install rich cryptography
       
+      - name: Debug - check files
+        run: |
+          echo "=== PWD ===" && pwd
+          echo "=== Files ===" && ls -la
+          echo "=== Perception dir ===" && ls -la perception/
+      
       - name: Initialize databases
         run: |
-          cd perception
-          python3 -c "from database import init_db; init_db(); print('✅ perception.db')"
-          cd ..
-          python3 -c "from provenance import init_db; init_db(); print('✅ provenance.db')"
+          python3 -c "from perception.database import init_db; init_db(); print('✅ perception.db')" || echo "⚠️ skipped"
+          python3 -c "from provenance import init_db; init_db(); print('✅ provenance.db')" || echo "⚠️ skipped"
       
-      - name: Run Perception (with full error output)
+      - name: Run Perception
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          cd perception
+          mkdir -p evidence
           python3 << 'PYEOF'
           import json
           import traceback
           from datetime import datetime
-          from layer import perceive
+          
+          print("🔍 Starting perception from:", __import__("os").getcwd())
           
           try:
+              from perception.layer import perceive
+              print("✅ Import OK")
+              
               result = perceive(save=False)
+              print(f"✅ Perceive OK: {len(result.get('observations', {}))} observations")
+              
               timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-              with open(f"../evidence/perception_{timestamp}.json", "w") as f:
+              filename = f"evidence/perception_{timestamp}.json"
+              with open(filename, "w") as f:
                   json.dump(result, f, indent=2, default=str)
-              print(f"✅ Success: {len(result.get('observations', {}))} observations")
+              print(f"✅ Written: {filename}")
           except Exception as e:
               print(f"❌ ERROR: {type(e).__name__}: {e}")
               traceback.print_exc()
               raise
           PYEOF
       
+      - name: Show evidence
+        if: always()
+        run: |
+          ls -la evidence/ || true
+          cat evidence/perception_*.json 2>/dev/null | head -30 || true
+      
       - name: Sign Evidence
         if: success()
         run: |
           python3 << 'PYEOF'
-          import json
-          import glob
+          import json, glob
           from perception.bridge_signatures import sign
           
           files = sorted(glob.glob("evidence/perception_*.json"))
           if not files:
-              print("⚠️  No evidence file found")
+              print("⚠️ No evidence file")
               exit(0)
-          
           latest = files[-1]
           with open(latest) as f:
               data = json.load(f)
-          
           if not data:
-              print(f"⚠️  Empty evidence: {latest}")
+              print("⚠️ Empty evidence")
               exit(0)
-          
           signed = sign(data, terminal="cloud")
           with open(f"{latest}.sig", "w") as f:
               json.dump(signed, f, indent=2)
           print(f"✅ Signed: {latest}.sig")
           PYEOF
-      
-      - name: Upload error log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: error-log
-          path: evidence/
       
       - name: Commit Evidence
         if: success()
