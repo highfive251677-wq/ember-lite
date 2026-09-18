@@ -18,3 +18,5 @@ npm-debug.log*
 .idea/
 __pycache__/
 *.pyc
+perception/keys/
+*.db
