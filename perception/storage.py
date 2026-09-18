@@ -317,34 +317,40 @@ class Storage:
 # =========================================================
 
 if __name__ == "__main__":
-    import tempfile
-
     print("=" * 60)
-    print("  TASK 3 — STORAGE ABSTRACTION (INNOVATED)")
+    print("  TASK 3 — STORAGE ABSTRACTION (WAVE 1)")
     print("=" * 60)
     print()
 
-    # Fresh operational DB
-    db = tempfile.mktemp(suffix=".db")
-    storage = Storage(db_path=db, legacy_mode=False)
+    # Use persistent path (no tempfile)
+    storage = Storage()
+    print(f"Operational DB path: {storage.db_path}")
+    print(f"Legacy mode: {storage.legacy_mode}")
+    print()
 
-    # Wave 1
     r = storage.init_wave_1()
-    print(f"Wave 1: {r.get('created')}")
-    print(f"DB Path: {r.get('db_path')}")
-    print()
+    print(f"Wave 1 init: created={r.get('created')}")
+    if not r.get("created"):
+        print(f"  Error: {r.get('error')}")
+        exit(1)
 
-    # Status
     status = storage.wave_status()
-    print("Status:")
-    for k, v in status.items():
-        if k != "tables_present":
-            print(f"  {k}: {v}")
-    print(f"  Tables: {len(status.get('tables_present', []))}")
+    print(f"\nWave Status:")
+    print(f"  operational_db: {status['operational_db']}")
+    print(f"  wave_1:         {status['wave_1']}")
+    print(f"  wave_2:         {status['wave_2']}")
+    print(f"  wave_3:         {status['wave_3']}")
+    print(f"  tables:         {len(status.get('tables_present', []))}")
     print()
 
-    print("🎉 TASK 3 SCAFFOLD READY (Wave 1 only)")
+    print("Tables present:")
+    for t in status.get("tables_present", []):
+        print(f"  • {t}")
+
     print()
-    print("Next steps:")
-    print("  Wave 2: migrate non-crypto tables")
-    print("  Wave 3: migrate crypto tables")
+    print("Legacy DBs:")
+    for d in storage.list_legacy_dbs():
+        print(f"  • {d['name']}: {d['size_bytes']} bytes")
+
+    print()
+    print("🎉 TASK 3 WAVE 1 COMPLETE")
