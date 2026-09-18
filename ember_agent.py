@@ -101,6 +101,18 @@ except ImportError as e:
     ORCHESTRATOR_OK = False
     ORCHESTRATOR_ERROR = str(e)
 
+# Release Gate (P5)
+try:
+    from perception.release_gate import (
+        evaluate_release as gate_evaluate,
+        get_evaluation_history as gate_history,
+        format_gate_report as gate_format
+    )
+    GATE_OK = True
+except ImportError as e:
+    GATE_OK = False
+    GATE_ERROR = str(e)
+
 # Bridge (P4)
 try:
     from perception.bridge_transport import (
@@ -192,6 +204,7 @@ class EmberAgent:
             f"[dim]Proactive:    {st(PROACTIVE_OK)}[/dim]\n"
             f"[dim]Orchestrator: {st(ORCHESTRATOR_OK)}[/dim]\n"
             f"[dim]Bridge:       {st(BRIDGE_OK)}[/dim]\n"
+            f"[dim]Release Gate: {st(GATE_OK)}[/dim]\n"
             f"[dim]Lessons:      {st(LESSONS_OK)}[/dim]"
         )
         console.print(Panel.fit(banner, border_style="green"))
@@ -690,6 +703,55 @@ Format:
     # IDENTITY / ASK / HISTORY / HELP
     # =========================================================
     
+
+    # =========================================================
+    # RELEASE GATE METHODS (P5)
+    # =========================================================
+    
+    def do_gate(self):
+        """Release Gate Evaluation ကို Run လုပ်ခြင်း"""
+        if not GATE_OK:
+            console.print("[red]❌ Release Gate missing.[/red]")
+            return
+        
+        console.print("\n[dim]🚦 Ember က Release Gate ကို စစ်ဆေးနေသည်...[/dim]\n")
+        
+        with console.status("[bold green]Evaluating 6 gates..."):
+            try:
+                result = gate_evaluate(self.last_perception)
+            except Exception as e:
+                console.print(f"[red]❌ Error: {e}[/red]")
+                return
+        
+        console.print(gate_format(result))
+    
+    def do_gate_history(self):
+        """Release Gate သမိုင်းကြောင်း"""
+        if not GATE_OK:
+            console.print("[red]❌ Release Gate missing.[/red]")
+            return
+        
+        history = gate_history(10)
+        if not history:
+            console.print("[yellow]⚠️  သမိုင်းကြောင်း မရှိပါ။[/yellow]")
+            return
+        
+        table = Table(title="🚦 Release Gate History")
+        table.add_column("ID", style="cyan")
+        table.add_column("Decision", style="magenta")
+        table.add_column("Score", style="yellow")
+        table.add_column("Gates", style="white")
+        table.add_column("At", style="dim")
+        
+        for h in history:
+            icon = {"SHIP": "✅", "HOLD": "⚠️",
+                    "REVIEW": "🔶", "NO_SHIP": "⛔"}.get(h["decision"], "•")
+            table.add_row(
+                h["id"], f"{icon} {h['decision']}",
+                str(h["score"]), h["passed"], h["at"][:19]
+            )
+        console.print(table)
+
     def do_ask(self, question: str):
         if not self.brain:
             console.print("[red]❌ Brain offline.[/red]")
@@ -856,6 +918,13 @@ Format:
                 if cmd_lower == "graph": self.do_graph(); continue
                 if cmd_lower == "graph verify": self.do_verify_graph(); continue
                 if cmd_lower == "mcp": self.do_mcp(); continue
+
+                # ===== RELEASE GATE (P5) =====
+                if cmd_lower == "gate":
+                    self.do_gate(); continue
+                if cmd_lower == "gate history":
+                    self.do_gate_history(); continue
+
                 
                 # ===== LESSONS =====
                 if cmd_lower == "lessons": self.do_lessons(); continue
