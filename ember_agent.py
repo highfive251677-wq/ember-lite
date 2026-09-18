@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """
-Ember Lite - Multi-Agent Orchestration Agent (P3)
-===================================================
-Ember Signal ရဲ့ Terminal Operator
+Ember Lite - Full Stack Agent (P1 → P4)
+=========================================
+Ember Signal Terminal Operator
 Tagline: "Signals to Evidence"
 
-Features:
-- Identity Awareness
-- LLM Brain
-- Perception (P1)
-- Proactive Suggestions (P2)
-- Multi-Agent Orchestration (P3) ← NEW!
-- Evidence Graph (P3) ← NEW!
-- Self-Learning Lessons
+Layers:
+- P1: Perception (Observers + Analysis)
+- P2: Proactive (Triggers + Suggestions + Monitor)
+- P3: Orchestration (Agent Registry + Evidence Graph)
+- P4: Bridge (Transport + Signatures + Signed Graph + MCP)
 """
 
 import sys
@@ -99,13 +96,32 @@ try:
     from perception.orchestrator import (
         AgentRegistry, researcher_agent, coder_agent, reviewer_agent
     )
-    from perception.evidence_graph import (
-        init_graph_db, add_node, add_edge, get_graph_summary
-    )
     ORCHESTRATOR_OK = True
 except ImportError as e:
     ORCHESTRATOR_OK = False
     ORCHESTRATOR_ERROR = str(e)
+
+# Bridge (P4)
+try:
+    from perception.bridge_transport import (
+        init_bridge_db as bridge_init,
+        heartbeat as bridge_heartbeat,
+        get_transport_stats as bridge_stats
+    )
+    from perception.bridge_router import (
+        route_command as bridge_route,
+        process_inbox as bridge_inbox,
+        graph_summary as bridge_graph,
+        verify_graph_integrity as bridge_verify_graph
+    )
+    from perception.bridge_signatures import (
+        sign as bridge_sign, verify as bridge_verify
+    )
+    from perception.bridge_mcp import get_mcp_info as bridge_mcp_info
+    BRIDGE_OK = True
+except ImportError as e:
+    BRIDGE_OK = False
+    BRIDGE_ERROR = str(e)
 
 
 # =========================================================
@@ -113,23 +129,23 @@ except ImportError as e:
 # =========================================================
 
 class EmberAgent:
-    """Ember Signal Terminal Operator - Multi-Agent Edition"""
+    """Ember Signal Terminal Operator - Full Stack"""
     
     def __init__(self):
         self.operator = os.getenv("USER", "unknown")
         self.name = "Ember Signal"
         self.tagline = "Signals to Evidence"
         
-        # DB Init
+        # Init DBs
         if PROVENANCE_OK:
             try:
                 init_db()
             except Exception:
                 pass
         
-        if ORCHESTRATOR_OK:
+        if BRIDGE_OK:
             try:
-                init_graph_db()
+                bridge_init()
             except Exception:
                 pass
         
@@ -150,15 +166,9 @@ class EmberAgent:
         if ORCHESTRATOR_OK:
             try:
                 self.registry = AgentRegistry()
-                self.registry.register(
-                    "researcher", researcher_agent, "Web research"
-                )
-                self.registry.register(
-                    "coder", coder_agent, "Code generation"
-                )
-                self.registry.register(
-                    "reviewer", reviewer_agent, "Code review"
-                )
+                self.registry.register("researcher", researcher_agent, "Web research")
+                self.registry.register("coder", coder_agent, "Code generation")
+                self.registry.register("reviewer", reviewer_agent, "Code review")
             except Exception:
                 self.registry = None
         
@@ -169,27 +179,26 @@ class EmberAgent:
     # =========================================================
     
     def _print_banner(self):
-        brain_status = "[green]✓[/green]" if self.brain else "[red]✗[/red]"
-        perception_status = "[green]✓[/green]" if PERCEPTION_OK else "[red]✗[/red]"
-        proactive_status = "[green]✓[/green]" if PROACTIVE_OK else "[red]✗[/red]"
-        lessons_status = "[green]✓[/green]" if LESSONS_OK else "[red]✗[/red]"
-        safety_status = "[green]✓[/green]" if SAFETY_OK else "[red]✗[/red]"
-        orch_status = "[green]✓[/green]" if ORCHESTRATOR_OK else "[red]✗[/red]"
+        def st(ok):
+            return "[green]✓[/green]" if ok else "[red]✗[/red]"
         
         banner = (
             f"[bold green]🌸 {self.name}[/bold green]\n"
             f"[dim]\"{self.tagline}\"[/dim]\n\n"
             f"[dim]Operator:     {self.operator}[/dim]\n"
-            f"[dim]Brain:        {brain_status}[/dim]\n"
-            f"[dim]Safety:       {safety_status}[/dim]\n"
-            f"[dim]Perception:   {perception_status}[/dim]\n"
-            f"[dim]Proactive:    {proactive_status}[/dim]\n"
-            f"[dim]Orchestrator: {orch_status}[/dim]\n"
-            f"[dim]Lessons:      {lessons_status}[/dim]"
+            f"[dim]Brain:        {st(self.brain is not None)}[/dim]\n"
+            f"[dim]Safety:       {st(SAFETY_OK)}[/dim]\n"
+            f"[dim]Perception:   {st(PERCEPTION_OK)}[/dim]\n"
+            f"[dim]Proactive:    {st(PROACTIVE_OK)}[/dim]\n"
+            f"[dim]Orchestrator: {st(ORCHESTRATOR_OK)}[/dim]\n"
+            f"[dim]Bridge:       {st(BRIDGE_OK)}[/dim]\n"
+            f"[dim]Lessons:      {st(LESSONS_OK)}[/dim]"
         )
-        
         console.print(Panel.fit(banner, border_style="green"))
         
+        # Warnings
+        if not BRIDGE_OK:
+            console.print(f"[yellow]⚠️  Bridge: {BRIDGE_ERROR}[/yellow]")
         if not ORCHESTRATOR_OK:
             console.print(f"[yellow]⚠️  Orchestrator: {ORCHESTRATOR_ERROR}[/yellow]")
     
@@ -208,8 +217,7 @@ class EmberAgent:
         if PROVENANCE_OK:
             try:
                 action_id, content_hash = log_action(
-                    "terminal_command", command, "ember_agent",
-                    f"Safety: {level}"
+                    "terminal_command", command, "ember_agent", f"Safety: {level}"
                 )
             except Exception:
                 pass
@@ -275,17 +283,13 @@ class EmberAgent:
         self.last_perception = report
         console.print(perceive_summary(report))
         
-        # Evidence Graph ထဲ မှတ်တမ်းတင်ခြင်း (P3)
-        if ORCHESTRATOR_OK:
+        if PROVENANCE_OK:
             try:
-                obs_node = add_node(
-                    "observation",
-                    f"perceive({observer_filter or 'all'})",
-                    report["analysis"].get("overall_status")
+                log_action(
+                    "perception", f"perceive({observer_filter or 'all'})",
+                    "ember_perception",
+                    f"Status: {report['analysis'].get('overall_status')}"
                 )
-                for source, obs in report["observations"].items():
-                    src_node = add_node("source", source, obs.get("status"))
-                    add_edge(obs_node, src_node, "observed_from")
             except Exception:
                 pass
     
@@ -308,7 +312,6 @@ Format:
 2. PRIORITY: (၁ ခု)
 3. NEXT ACTION: (bounded)
 4. REASON:"""
-        
         try:
             response = self.brain.think(prompt, EMBER_IDENTITY)
             console.print(Panel(response, title="🌸 Ember's Analysis", border_style="cyan"))
@@ -382,6 +385,10 @@ Format:
                     f"\n   Status: {result['overall_status']} "
                     f"({result['overall_confidence']}%)"
                 )
+                console.print(
+                    f"   Triggers: {result['triggers_count']} | "
+                    f"Suggestions: {result['suggestions_count']}"
+                )
             except Exception as e:
                 console.print(f"[red]❌ {e}[/red]")
         
@@ -416,75 +423,47 @@ Format:
         console.print(table)
     
     # =========================================================
-    # ORCHESTRATOR (P3) - NEW!
+    # ORCHESTRATION (P3)
     # =========================================================
     
     def do_agents(self):
-        """Register လုပ်ထားတဲ့ Agent စာရင်း"""
         if not ORCHESTRATOR_OK or not self.registry:
             console.print("[red]❌ Orchestrator missing.[/red]")
             return
-        
         console.print()
         table = Table(title="🤖 Agent Registry")
         table.add_column("Name", style="cyan")
         table.add_column("Description", style="green")
-        
         for name in self.registry.list_agents():
             info = self.registry.agents[name]
             table.add_row(name, info.get("description", ""))
-        
         console.print(table)
     
     def do_orchestrate(self, task: str):
-        """Agent တွေကို ခေါ်ပြီး Task လုပ်ခိုင်းခြင်း"""
         if not ORCHESTRATOR_OK or not self.registry:
             console.print("[red]❌ Orchestrator missing.[/red]")
             return
-        
         if not task:
             console.print("[yellow]Usage: orchestrate <task>[/yellow]")
             return
         
         console.print(f"\n[dim]🎭 Orchestrating: {task}[/dim]\n")
-        
-        # Task Node ကို Graph ထဲ ထည့်
-        try:
-            task_node = add_node("task", task, "orchestration")
-        except Exception:
-            task_node = None
-        
         results = {}
         
-        # Agent အားလုံးကို ခေါ်
         for agent_name in self.registry.list_agents():
             console.print(f"[bold cyan]▶ Calling {agent_name}...[/bold cyan]")
             try:
                 result = self.registry.call(agent_name, task)
                 results[agent_name] = result
                 console.print(f"[green]   ✓ {result}[/green]")
-                
-                # Graph ထဲ မှတ်တမ်းတင်ခြင်း
-                if task_node:
-                    try:
-                        agent_node = add_node(
-                            "agent_output", agent_name, result
-                        )
-                        add_edge(task_node, agent_node, "produced_by")
-                    except Exception:
-                        pass
             except Exception as e:
                 console.print(f"[red]   ✗ {agent_name}: {e}[/red]")
                 results[agent_name] = f"ERROR: {e}"
         
-        # Brain ရှိရင် Synthesis လုပ်ခိုင်း
         if self.brain and results:
-            console.print("\n[dim]🧠 Ember က ရလဒ်တွေကို ပေါင်းစပ်နေသည်...[/dim]")
-            
-            results_text = "\n".join(
-                f"- {k}: {v}" for k, v in results.items()
-            )
-            prompt = f"""ဒီ Agent ရလဒ်တွေကို ပေါင်းစပ်ပါ:
+            console.print("\n[dim]🧠 Ember က ပေါင်းစပ်နေသည်...[/dim]")
+            results_text = "\n".join(f"- {k}: {v}" for k, v in results.items())
+            prompt = f"""Agent ရလဒ်တွေကို ပေါင်းစပ်ပါ:
 
 TASK: {task}
 
@@ -495,7 +474,6 @@ Format:
 1. SYNTHESIS: (၂-၃ ကြောင်း)
 2. RECOMMENDATION: (bounded)
 3. CONFIDENCE: (0-100)"""
-            
             try:
                 synthesis = self.brain.think(prompt, EMBER_IDENTITY)
                 console.print(Panel(
@@ -508,33 +486,149 @@ Format:
         
         if PROVENANCE_OK:
             try:
-                log_action(
-                    "orchestration", task, "ember_orchestrator",
-                    f"{len(results)} agents"
-                )
+                log_action("orchestration", task, "ember_orchestrator",
+                           f"{len(results)} agents")
             except Exception:
                 pass
     
-    def do_graph(self):
-        """Evidence Graph Summary"""
-        if not ORCHESTRATOR_OK:
-            console.print("[red]❌ Graph missing.[/red]")
+    # =========================================================
+    # BRIDGE (P4)
+    # =========================================================
+    
+    def do_route(self, command: str, sender: str):
+        if not BRIDGE_OK:
+            console.print("[red]❌ Bridge missing.[/red]")
+            return
+        if not command:
+            console.print(f"[yellow]Usage: {sender} <command>[/yellow]")
             return
         
+        console.print(f"\n[dim]📤 Routing from {sender}: {command}[/dim]")
         try:
-            summary = get_graph_summary()
+            result = bridge_route(command, sender)
+            if result.get("status") in ("sent", "duplicate"):
+                icon = "✅" if result.get("signed") else "⚠️"
+                console.print(f"[green]{icon} Routed ({result['status']})[/green]")
+                console.print(f"[dim]   Channel: {result['channel']}[/dim]")
+                console.print(f"[dim]   Signed: {result.get('signed')}[/dim]")
+            else:
+                console.print(f"[red]❌ {result.get('error')}[/red]")
         except Exception as e:
             console.print(f"[red]❌ {e}[/red]")
+    
+    def do_bridge_status(self):
+        if not BRIDGE_OK:
+            console.print("[red]❌ Bridge missing.[/red]")
             return
-        
-        console.print()
-        console.print(Panel.fit(
-            f"[bold cyan]Evidence Graph[/bold cyan]\n\n"
-            f"[dim]Nodes: {summary['nodes']}[/dim]\n"
-            f"[dim]Edges: {summary['edges']}[/dim]",
-            title="📊 Graph Summary",
-            border_style="cyan"
-        ))
+        try:
+            stats = bridge_stats()
+            table = Table(title="🌉 Bridge Status")
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="green")
+            for k, v in stats.items():
+                table.add_row(k, str(v))
+            console.print(table)
+        except Exception as e:
+            console.print(f"[red]❌ {e}[/red]")
+    
+    def do_bridge_inbox(self):
+        if not BRIDGE_OK:
+            console.print("[red]❌ Bridge missing.[/red]")
+            return
+        try:
+            msgs = bridge_inbox("T", limit=10)
+            if not msgs:
+                console.print("[dim]📭 No pending messages.[/dim]")
+                return
+            
+            table = Table(title="📥 Inbox (Termux)")
+            table.add_column("From", style="cyan")
+            table.add_column("Command", style="white")
+            table.add_column("Verified", style="green")
+            table.add_column("Time", style="dim")
+            
+            for m in msgs:
+                icon = "✅" if m.get("verified") else "❌"
+                cmd_text = str(m["payload"].get("command", ""))[:40]
+                table.add_row(
+                    m["sender"], cmd_text, icon,
+                    m.get("created_at", "")[:19]
+                )
+            console.print(table)
+        except Exception as e:
+            console.print(f"[red]❌ {e}[/red]")
+    
+    def do_sign(self, text: str):
+        if not BRIDGE_OK:
+            console.print("[red]❌ Bridge missing.[/red]")
+            return
+        if not text:
+            console.print("[yellow]Usage: sign <text>[/yellow]")
+            return
+        try:
+            result = bridge_sign(text, terminal="T")
+            console.print(Panel.fit(
+                f"[cyan]Payload:[/cyan]   {text[:60]}\n"
+                f"[cyan]Signature:[/cyan] {result['signature'][:48]}...\n"
+                f"[cyan]Algorithm:[/cyan] {result['algorithm']}",
+                title="🔐 Signature",
+                border_style="cyan"
+            ))
+        except Exception as e:
+            console.print(f"[red]❌ {e}[/red]")
+    
+    def do_graph(self):
+        if not BRIDGE_OK:
+            console.print("[red]❌ Bridge missing.[/red]")
+            return
+        try:
+            gs = bridge_graph()
+            console.print(Panel.fit(
+                f"[cyan]Nodes:[/cyan]      {gs['nodes']}\n"
+                f"[cyan]Edges:[/cyan]      {gs['edges']}\n"
+                f"[cyan]Terminals:[/cyan]  {gs['terminals']}",
+                title="📊 Signed Evidence Graph",
+                border_style="cyan"
+            ))
+        except Exception as e:
+            console.print(f"[red]❌ {e}[/red]")
+    
+    def do_verify_graph(self):
+        if not BRIDGE_OK:
+            console.print("[red]❌ Bridge missing.[/red]")
+            return
+        try:
+            vi = bridge_verify_graph()
+            color = "green" if vi["invalid"] == 0 else "red"
+            console.print(Panel.fit(
+                f"[cyan]Total:[/cyan]    {vi['total']}\n"
+                f"[green]Valid:[/green]    {vi['valid']}\n"
+                f"[{color}]Invalid:[/{color}]  {vi['invalid']}",
+                title="🔍 Graph Integrity",
+                border_style=color
+            ))
+        except Exception as e:
+            console.print(f"[red]❌ {e}[/red]")
+    
+    def do_mcp(self):
+        if not BRIDGE_OK:
+            console.print("[red]❌ Bridge missing.[/red]")
+            return
+        try:
+            info = bridge_mcp_info()
+            tools = info["capabilities"]["tools"]
+            terminals = info["capabilities"]["terminals"]
+            console.print(Panel.fit(
+                f"[cyan]Name:[/cyan]       {info['name']}\n"
+                f"[cyan]Version:[/cyan]    {info['version']}\n"
+                f"[cyan]Tools:[/cyan]      {len(tools)}\n"
+                f"[cyan]Transport:[/cyan]  {info['capabilities']['transport']}\n"
+                f"[cyan]Terminals:[/cyan]  {', '.join(terminals)}",
+                title="🔌 MCP Interface",
+                border_style="cyan"
+            ))
+        except Exception as e:
+            console.print(f"[red]❌ {e}[/red]")
     
     # =========================================================
     # LESSONS
@@ -593,7 +687,7 @@ Format:
             console.print(f"   [green]Fix:[/green] {w['fix']}")
     
     # =========================================================
-    # IDENTITY / ASK
+    # IDENTITY / ASK / HISTORY / HELP
     # =========================================================
     
     def do_ask(self, question: str):
@@ -635,11 +729,11 @@ Format:
             console.print("[red]❌ Identity missing.[/red]")
             return
         console.print(Panel.fit(
-            f"[bold cyan]Name:[/bold cyan] {EMBER_IDENTITY['name']}\n"
-            f"[bold cyan]Tagline:[/bold cyan] {EMBER_IDENTITY['tagline']}\n"
-            f"[bold cyan]Archetype:[/bold cyan] {EMBER_IDENTITY['personality']['archetype']}\n"
-            f"[bold cyan]Category:[/bold cyan] {EMBER_IDENTITY['market_identity']['category']}\n"
-            f"[bold cyan]Role:[/bold cyan] Evidence & Audit Layer",
+            f"[bold cyan]Name:[/bold cyan]       {EMBER_IDENTITY['name']}\n"
+            f"[bold cyan]Tagline:[/bold cyan]    {EMBER_IDENTITY['tagline']}\n"
+            f"[bold cyan]Archetype:[/bold cyan]  {EMBER_IDENTITY['personality']['archetype']}\n"
+            f"[bold cyan]Category:[/bold cyan]   {EMBER_IDENTITY['market_identity']['category']}\n"
+            f"[bold cyan]Role:[/bold cyan]       Evidence & Audit Layer",
             title="🌸 Ember Self-Awareness",
             border_style="cyan"
         ))
@@ -679,9 +773,16 @@ Format:
             "[bold cyan]💡 Proactive (P2):[/bold cyan]\n"
             "  suggest / monitor / monitor 5 / stats / suggestions\n\n"
             "[bold cyan]🎭 Orchestration (P3):[/bold cyan]\n"
-            "  agents              - Agent စာရင်း\n"
-            "  orchestrate <task>  - Agent တွေ ခေါ်ရန်\n"
-            "  graph               - Evidence Graph Summary\n\n"
+            "  agents / orchestrate <task>\n\n"
+            "[bold cyan]🌉 Bridge (P4):[/bold cyan]\n"
+            "  @ <cmd>        - a-Shell ကို ပို့\n"
+            "  T <cmd>        - Termux ကို ပို့\n"
+            "  bridge         - Bridge Status\n"
+            "  bridge inbox   - Messages ရယူ\n"
+            "  sign <text>    - Ed25519 Sign\n"
+            "  graph          - Signed Graph\n"
+            "  graph verify   - Integrity Check\n"
+            "  mcp            - MCP Interface\n\n"
             "[bold cyan]📚 Lessons:[/bold cyan]\n"
             "  lessons / check <code>\n\n"
             "[bold cyan]🌸 Identity:[/bold cyan]\n"
@@ -706,25 +807,25 @@ Format:
                 if not cmd_stripped:
                     continue
                 
-                # Exit
+                # ===== EXIT =====
                 if cmd_lower in ["exit", "quit"]:
                     console.print("[dim]👋 Goodbye![/dim]")
                     break
                 
-                # Identity
+                # ===== IDENTITY =====
                 if cmd_lower == "whoami": self.do_whoami(); continue
                 if cmd_lower == "identity": self.do_identity(); continue
                 if cmd_lower == "history": self.do_history(); continue
                 if cmd_lower == "help": self.do_help(); continue
                 
-                # Perception
+                # ===== PERCEPTION =====
                 if cmd_lower == "perceive": self.do_perceive(); continue
                 if cmd_lower.startswith("perceive "):
                     f = cmd_stripped[9:].strip()
                     self.do_perceive(observer_filter=[f]); continue
                 if cmd_lower == "analyze": self.do_analyze(); continue
                 
-                # Proactive
+                # ===== PROACTIVE =====
                 if cmd_lower == "suggest": self.do_suggest(); continue
                 if cmd_lower == "monitor": self.do_monitor(iterations=3); continue
                 if cmd_lower.startswith("monitor "):
@@ -737,26 +838,40 @@ Format:
                 if cmd_lower == "stats": self.do_stats(); continue
                 if cmd_lower == "suggestions": self.do_suggestions_history(); continue
                 
-                # Orchestrator (P3)
+                # ===== ORCHESTRATION =====
                 if cmd_lower == "agents": self.do_agents(); continue
                 if cmd_lower.startswith("orchestrate "):
                     task = cmd_stripped[12:].strip()
                     self.do_orchestrate(task); continue
-                if cmd_lower == "graph": self.do_graph(); continue
                 
-                # Lessons
+                # ===== BRIDGE (P4) =====
+                if cmd_stripped.startswith("@ "):
+                    self.do_route(cmd_stripped[2:].strip(), "@"); continue
+                if cmd_stripped.startswith("T "):
+                    self.do_route(cmd_stripped[2:].strip(), "T"); continue
+                if cmd_lower == "bridge": self.do_bridge_status(); continue
+                if cmd_lower == "bridge inbox": self.do_bridge_inbox(); continue
+                if cmd_lower.startswith("sign "):
+                    self.do_sign(cmd_stripped[5:].strip()); continue
+                if cmd_lower == "graph": self.do_graph(); continue
+                if cmd_lower == "graph verify": self.do_verify_graph(); continue
+                if cmd_lower == "mcp": self.do_mcp(); continue
+                
+                # ===== LESSONS =====
                 if cmd_lower == "lessons": self.do_lessons(); continue
                 if cmd_lower.startswith("check "):
                     self.do_check_lessons(cmd_stripped[6:].strip()); continue
                 
-                # Ask
+                # ===== ASK =====
                 if cmd_lower.startswith("ask "):
                     q = cmd_stripped[4:].strip()
-                    if q: self.do_ask(q)
-                    else: console.print("[yellow]Usage: ask <q>[/yellow]")
+                    if q:
+                        self.do_ask(q)
+                    else:
+                        console.print("[yellow]Usage: ask <q>[/yellow]")
                     continue
                 
-                # Terminal
+                # ===== TERMINAL =====
                 self.execute(cmd_stripped)
                 console.print()
             
@@ -766,6 +881,10 @@ Format:
             except Exception as e:
                 console.print(f"[red]❌ Error: {e}[/red]")
 
+
+# =========================================================
+# MAIN
+# =========================================================
 
 def main():
     try:
