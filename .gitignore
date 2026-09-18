@@ -1,28 +1,46 @@
-*.db
-*.sqlite
-*.sqlite3
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
-venv/
-env/
 .pytest_cache/
-.env
-.env.local
-.DS_Store
-Thumbs.db
-*.log
-node_modules/
-npm-debug.log*
-.vscode/
-.idea/
-__pycache__/
-*.pyc
-perception/keys/
-*.db
+.mypy_cache/
 
-# Wave backups (runtime data)
+# Runtime data
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+data/runtime/
+.ember/
+
+# Secrets and keys
+.env
+.env.*
+perception/keys/
+*.pem
+*.key
+*.seed
+
+# Backups (all variants)
+*.bak
+*.backup
+*.db.backup_*
+*.db.legacy_*
+*.legacy_*.backup
+*.v1.backup
 **/wave2_backups/
 **/wave3_backups/
 **/migration_backup/
 **/*_backups/
+
+# Logs and reports
+*.log
+reports/
+evidence/runtime/
+
+# Editors
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
