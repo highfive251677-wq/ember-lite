@@ -194,9 +194,12 @@ def validate_event(event: dict | None,
         if fields.get("event_id", {}).get("status") == "unknown":
             overall = "unavailable"
         # If any critical field is invalid → invalid
-        elif any("out_of_range" in p or "not_number" in p
-                 or "not_string" in p or "unparseable" in p
-                 for p in problems):
+        elif any(
+            ("out_of_range" in p or "not_number" in p
+             or "not_string" in p or "unparseable" in p
+             or "in_future" in p or "invalid_chars" in p)
+            for p in problems
+        ):
             overall = "invalid"
         # If any timestamp is stale → stale
         elif fields["captured_at"]["status"] == "stale":
