@@ -44,3 +44,6 @@ evidence/runtime/
 .idea/
 .DS_Store
 Thumbs.db
+wave3_snapshots/
+*.bak
+*.snapshot_*
