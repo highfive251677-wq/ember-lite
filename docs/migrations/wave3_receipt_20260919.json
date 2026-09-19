@@ -1,0 +1,45 @@
+{
+  "started_at": "2026-09-19T06:44:48.585796+00:00",
+  "dry_run": true,
+  "op_db": "/data/data/com.termux/files/home/.ember/ember_operational.db",
+  "legacy_root": "/data/data/com.termux/files/home/ember-lite/perception",
+  "snapshots": [
+    {
+      "name": "evidence_chain.db",
+      "would_snapshot": true,
+      "size_bytes": 20480
+    },
+    {
+      "name": "anchors.db",
+      "would_snapshot": true,
+      "size_bytes": 24576
+    },
+    {
+      "name": "authorization.db",
+      "would_snapshot": true,
+      "size_bytes": 36864
+    }
+  ],
+  "migrations": {
+    "evidence_blocks": {
+      "dry_run": true
+    },
+    "anchors": {
+      "dry_run": true
+    },
+    "authorizations": {
+      "dry_run": true
+    },
+    "approvals": {
+      "dry_run": true
+    },
+    "receipts": {
+      "dry_run": true
+    }
+  },
+  "skipped_dbs": [
+    "contracts.db"
+  ],
+  "finished_at": "2026-09-19T06:44:48.586764+00:00",
+  "success": true
+}
