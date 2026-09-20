@@ -1,0 +1,15 @@
+{
+  "anchor_hash": "b5342856505c48a412fa072c4e6be87e8ec672e73ac65bed95e5fd4bed08225e",
+  "anchor_id": "anc-769bcba9cb19",
+  "block_count": 63,
+  "created_at": "2026-09-20T02:10:47.343020+00:00",
+  "device_id": "ember-tab-a",
+  "first_block_index": 1,
+  "last_block_index": 63,
+  "merkle_root": "0ec4c36599c3369ee6d63a4c003b3e85894353750aff20d99c2e553c33ff629a",
+  "previous_anchor_hash": null,
+  "public_key": "g8U8zw1q5JFn13U7h28tRllKUsuM9dXT4pS4kM5AnBM=",
+  "schema_version": "1.0",
+  "sequence_number": 1,
+  "signature": "fNikNskzD220K4nwnhBZXBpMW4xIAW6T7I81/x6EsoOyN9pKVor5Z7yGUldK+gp8nSHBfv3GDRc8QCoCkW/XAw=="
+}
