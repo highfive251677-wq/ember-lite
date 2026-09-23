@@ -1067,6 +1067,14 @@ Format:
 # =========================================================
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1].lower() == "verify":
+        from ember_release import main as verify_main
+        original_argv = sys.argv[:]
+        try:
+            sys.argv = ["ember-signal verify", *sys.argv[2:]]
+            raise SystemExit(verify_main())
+        finally:
+            sys.argv = original_argv
     try:
         agent = EmberAgent()
         agent.run()

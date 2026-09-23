@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ember-signal"
+version = "0.1.0"
+description = "Local-first evidence and governance layer for terminal operations"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Luma Foundry" }]
+dependencies = [
+  "rich>=13.0.0",
+  "requests>=2.31.0",
+  "cryptography>=41.0.0",
+]
+
+[project.scripts]
+ember-signal = "ember_agent:main"
+
+[tool.setuptools]
+py-modules = [
+  "ember_agent",
+  "ember_brain",
+  "ember_brain_light",
+  "ember_identity",
+  "ember_release",
+  "provenance",
+  "safety",
+]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["perception*"]
+
+[tool.ember.release]
+product = "Ember Signal"
+tagline = "Signals to Evidence"
+commercial_status = "PENDING — evidence incomplete"
+source_license = "MIT"
+source_commit = "2bb64e184c5618cf5d7fef2f4755975b6041b535"
