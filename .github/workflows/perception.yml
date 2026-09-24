@@ -27,7 +27,7 @@ jobs:
         run: python3 -m perception.migration_verify
       - name: Upload artifacts (NOT committed)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: perception-artifacts
           path: evidence/
