@@ -62,3 +62,19 @@ def perception_db(isolated_dbs):
     conn.commit()
     conn.close()
     return str(isolated_dbs["perception"])
+
+
+@pytest.fixture(autouse=True)
+def provisioned_identity(tmp_path, monkeypatch):
+    """
+    Evidence-hash contract: identity is fail-closed — nothing mints keys
+    silently. Every test therefore runs against an isolated KEY_DIR with an
+    explicitly provisioned terminal "T" identity (the terminal the signing
+    call sites use), so tests exercise the real provisioned-identity path.
+    """
+    from perception import bridge_signatures as bs
+
+    key_dir = tmp_path / "keys"
+    monkeypatch.setattr(bs, "KEY_DIR", str(key_dir))
+    bs.generate_keypair("T")
+    return str(key_dir)

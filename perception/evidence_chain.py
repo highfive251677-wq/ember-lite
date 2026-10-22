@@ -10,11 +10,18 @@ Core Change:
 Never claim "cryptographic integrity" unless each flag is true.
 
 KPI #3 (Cryptographic Integrity):
-    - Canonical serialization
+    - Canonical serialization (perception.canonical — single source of truth)
     - Hash recomputation in verification
     - Signing failures NEVER swallowed
     - SQLite transactions for append
-    - Schema version + key ID
+    - Schema version + key ID (BINDING: verified against the signing key)
+
+Evidence-hash contract (docs/EVIDENCE_HASH_CONTRACT.md):
+    - An empty chain is vacuously valid but explicitly marked:
+      status="empty", tip=None — never a fake zero tip, and tip is always
+      the 16-hex prefix of the head block hash when blocks exist.
+    - Signature verification is key_id-bound: the stored key_id must match
+      the public key that verifies the signature.
 
 Pure Python stdlib only. Backward-compatible with v1 callers.
 """
@@ -22,11 +29,12 @@ Pure Python stdlib only. Backward-compatible with v1 callers.
 from __future__ import annotations
 
 import sqlite3
-import hashlib
 import json
 import os
 from datetime import datetime, timezone
 from typing import Any
+
+from perception.canonical import canonical_bytes as _canonical_impl, hash_hex as _hash_impl
 
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "evidence_chain.db")
@@ -41,16 +49,14 @@ SCHEMA_VERSION = "2.0"
 def _canonical_bytes(payload: Any) -> bytes:
     """
     Canonical serialization: sorted keys, no whitespace, UTF-8.
-    Same input always produces same bytes.
+    Delegates to perception.canonical (the contract's single source of truth).
+    Kept as a module-level alias for backward compatibility.
     """
-    return json.dumps(
-        payload, sort_keys=True, separators=(",", ":"),
-        ensure_ascii=False, default=str,
-    ).encode("utf-8")
+    return _canonical_impl(payload)
 
 
 def _hash(payload: Any) -> str:
-    return hashlib.sha256(_canonical_bytes(payload)).hexdigest()
+    return _hash_impl(payload)
 
 
 def _now_iso() -> str:
@@ -216,16 +222,18 @@ def verify_chain() -> dict:
         rows = conn.execute("""
             SELECT block_index, schema_version, observation_hash,
                    previous_hash, block_hash, canonical_payload,
-                   signature, public_key, signed
+                   signature, public_key, key_id, signed
             FROM chain ORDER BY block_index ASC
         """).fetchall()
     finally:
         conn.close()
 
     if not rows:
+        # Contract: an empty chain is vacuously valid but must never look
+        # like a real one — explicit status and a null tip (no fake zeros).
         return {
-            "valid": True, "blocks": 0, "broken_at": None,
-            "verified": 0, "unverified": 0, "tip": "0" * 64,
+            "valid": True, "status": "empty", "blocks": 0, "broken_at": None,
+            "verified": 0, "unverified": 0, "tip": None,
         }
 
     previous_hash = "0" * 64
@@ -257,12 +265,18 @@ def verify_chain() -> dict:
             broken_reason = f"hash_mismatch_at_{idx}"
             break
 
-        # 3. Verify signature (if present)
+        # 3. Verify signature (if present) — key_id-bound per the contract:
+        # the stored key_id must match the key that verifies the signature,
+        # so swapping in an attacker key plus a re-signed block fails
+        # attribution instead of passing as verified.
         if row["signed"] and row["signature"] and row["public_key"]:
             try:
-                from perception.bridge_signatures import verify
-                ok = verify(payload, row["signature"], row["public_key"])
-                if ok:
+                from perception.bridge_signatures import verify_signature
+                outcome = verify_signature(
+                    payload, row["signature"], row["public_key"],
+                    expected_key_id=row["key_id"],
+                )
+                if outcome["valid"]:
                     verified += 1
                 else:
                     unverified += 1
@@ -275,11 +289,13 @@ def verify_chain() -> dict:
 
     return {
         "valid": broken_at is None,
+        "status": "ok" if broken_at is None else f"broken_at_{broken_at}",
         "blocks": len(rows),
         "broken_at": broken_at,
         "broken_reason": broken_reason,
         "verified": verified,
         "unverified": unverified,
+        # Contract: tip is ALWAYS the 16-hex prefix of the head block hash.
         "tip": previous_hash[:16],
     }
 
@@ -297,7 +313,7 @@ def get_chain_summary() -> dict:
                    SUM(signed), SUM(verified), SUM(anchored)
             FROM chain
         """).fetchone()
-        tip = "0" * 16
+        tip = None  # Contract: an empty chain has no tip — null, not zeros.
         if row[0]:
             r = conn.execute("""
                 SELECT block_hash FROM chain
